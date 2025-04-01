@@ -1,0 +1,51 @@
+Tableau
+HR Dashboard
+
+
+Colour Schema
+	Basic: #777777 & #f5f5f5
+	Custom: #03c4a1 & #c52a87
+
+Project Steps
+	1. Building Data Source
+		a. Collect Data
+		b. Connect Data
+		c. Build Data Model
+		d. Check Data Quality
+		e. Check Data Types
+		f. Understand & Explore Data
+	2. Building Charts
+		a. 	Analyse Requirements & Choose Chart
+		b. Initial Format of Sheet
+		c. Create Calculated Fields & test
+		d. Build Chart
+		e. Format Chart
+	3. Building Dashboards
+		a. Plan the Dashboard
+			i. Dashboard Mockup
+			ii. Container Mockup
+		b. Create Container Structure
+		c. Put All Together
+		d. Fixing Colours
+		e. Fix Texts
+		f. Refine Charts
+		g. Fix Spacing (Inner/Outer Spacing)
+		h. Fix Tooltips
+		i. Add Filters & Legends
+		j. Add Logos & Icons
+	
+ChatGPT Role
+	It is used here to generate the dataset used for this project. By use of a Python script (Faker Library).	https://www.datawithbaraa.com/tableau/tableau-hr-project-thank-you/
+
+
+Font
+- Trebuchet MS
+Add colours to Workbook
+
+Define font colour - #777777
+Define colour of background - Dark/Black
+
+
+Credit
+Data with Baraa on YouTube
+https://youtu.be/UcGF09Awm4Y
