@@ -65,18 +65,18 @@ WITH monthly_trips_by_city AS (
 	GROUP BY c.city_id, c.city_name, DATETRUNC(MONTH, t.date), d.month_name, mtt.total_target_trips
 ), performance_gap AS (
 	SELECT
-	city_name,
-	month,
-	month_name,
-	actual_trips,
-	target_trips,
-	CASE
-		WHEN actual_trips > target_trips THEN 'Above Target'
-		ELSE 'Below Target'
-	END AS performance_status,
-	-- To calculate Percentage difference: ((|actual - expected|) / ((actual + expected) / 2)) * 100
-	ROUND(100 * (ABS(actual_trips - target_trips) / CAST(((actual_trips + target_trips) / 2) AS FLOAT)), 2) AS [%_difference]
-FROM monthly_trips_by_city
+		city_name,
+		month,
+		month_name,
+		actual_trips,
+		target_trips,
+		CASE
+			WHEN actual_trips > target_trips THEN 'Above Target'
+			ELSE 'Below Target'
+		END AS performance_status,
+		-- To calculate Percentage difference: ((|actual - expected|) / ((actual + expected) / 2)) * 100
+		ROUND(100 * (ABS(actual_trips - target_trips) / CAST(((actual_trips + target_trips) / 2) AS FLOAT)), 2) AS [%_difference]
+	FROM monthly_trips_by_city
 )
 
 SELECT
