@@ -36,14 +36,6 @@ GROUP BY c.city_name
 ORDER BY [%_contribution_to_total_trips] DESC
 ;
 
-SELECT
-	city_id,
-	month,
-	SUM(total_target_trips)
-FROM targetsdb.monthly_target_trips
-GROUP BY city_id, month
-ORDER BY 1,2
-
 
 /*
 ==================================
@@ -51,24 +43,32 @@ Request 2: Monthly City-Level Trips Target Performance Report
 ==================================
 */
 
+WITH monthly_trips_by_city AS (
+	SELECT
+		c.city_id,
+		c.city_name,
+		DATETRUNC(MONTH, t.date) AS month,
+		COUNT(t.trip_id) AS actual_trips,
+		mtt.total_target_trips AS target_trips
+	FROM tripsdb.fact_trips AS t
+	LEFT JOIN tripsdb.dim_city AS c
+		ON c.city_id = t.city_id
+	LEFT JOIN targetsdb.monthly_target_trips AS mtt
+		ON t.city_id = mtt.city_id
+		AND DATETRUNC(MONTH, t.date) = mtt.month
+	GROUP BY c.city_id, c.city_name, DATETRUNC(MONTH, t.date), mtt.total_target_trips
+)
 SELECT
-	c.city_name,
-	DATETRUNC(MONTH, t.date),
-	--mtt.month,
-	COUNT(t.trip_id) AS total_trips,
-	mtt.total_target_trips AS target_trips/*,
+	city_name,
+	month,
+	actual_trips,
+	target_trips,
 	CASE
-		WHEN COUNT(t.trip_id) > mtt.total_target_trips THEN 'Above Target'
+		WHEN actual_trips > target_trips THEN 'Above Target'
 		ELSE 'Below Target'
-	END AS performance_status*/
-FROM tripsdb.fact_trips AS t
-LEFT JOIN tripsdb.dim_city AS c
-	ON c.city_id = t.city_id
-LEFT JOIN targetsdb.monthly_target_trips AS mtt
-	ON c.city_id = mtt.city_id
-LEFT JOIN tripsdb.dim_date AS d
-	ON d.date = t.date
-	AND d.start_of_month = mtt.month
-GROUP BY c.city_name, DATETRUNC(MONTH, t.date), mtt.total_target_trips
-ORDER BY c.city_name, DATETRUNC(MONTH, t.date)
+	END AS performance_status,
+	-- To calculate Percentage difference: ((|actual - expected|) / ((actual + expected) / 2)) * 100
+	ROUND(100 * (ABS(actual_trips - target_trips) / CAST(((actual_trips + target_trips) / 2) AS FLOAT)), 2) AS [%_difference]
+FROM monthly_trips_by_city
+ORDER BY city_name, month
 ;
