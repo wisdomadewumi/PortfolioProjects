@@ -78,9 +78,9 @@ Purpose: This table provides an aggregated summary of passenger counts for each 
 
 	- month: The start date of the month (formatted as YYYY-MM-DD). All metrics in this table are aggregated for the entire month, aligning with other time-based analyses.
 	- city_id: Unique identifier for the city.
-	- total_passengers: The aggregated count of all passengers (both new and repeat) for the specified city and month.
 	- new_passengers: The count of passengers taking their first ride in the specified city and month.
 	- repeat_passengers: The count of passengers who have taken at least one ride in previous months and returned to ride again in the specified city and month.
+	- total_passengers: The aggregated count of all passengers (both new and repeat) for the specified city and month.
 
 */
 
@@ -89,9 +89,9 @@ IF OBJECT_ID ('tripsdb.fact_passenger_summary', 'U') IS NOT NULL
 CREATE TABLE tripsdb.fact_passenger_summary (
 	month				DATE,
 	city_id				NVARCHAR(10),
-	total_passengers	INT,
 	new_passengers		INT,
-	repeat_passengers	INT
+	repeat_passengers	INT,
+	total_passengers	INT
 );
 GO
 
