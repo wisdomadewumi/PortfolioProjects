@@ -111,82 +111,216 @@ ORDER BY avg_wait_time
 ; -- Patients within 51-65 age range and above 66 have the least wait time on average.
 
 
---8. During which days and hours do patients experience the longest wait times?
+--8. During which hours do patients experience the longest wait times?
+SELECT
+	DATEPART(HOUR, date) AS hour_digit,
+	AVG(CAST(patient_waittime AS FLOAT)) AS avg_wait_time
+FROM dbo.hospital_er_dataset
+GROUP BY DATEPART(HOUR, date)
+ORDER BY avg_wait_time DESC
+; --3am, 10pm and 11am are the top 3 busiest hours
 
----
 
-### 😊 Patient Satisfaction & Outcomes
+--9. During which days do patients experience the longest wait times?
+SELECT
+	DATEPART(WEEKDAY, date) AS day_of_week_digit,
+	DATENAME(WEEKDAY, date) AS day_of_week,
+	AVG(CAST(patient_waittime AS FLOAT)) AS avg_wait_time
+FROM dbo.hospital_er_dataset
+GROUP BY DATEPART(WEEKDAY, date), DATENAME(WEEKDAY, date)
+ORDER BY avg_wait_time DESC
+; -- While Monday, Saturday and Sunday are the top 3 busiest days
 
-9. **Average Patient Satisfaction Score:**
-   - *"What is the average satisfaction score reported by ER patients?"*
 
-10. **Satisfaction Scores by Demographics:**
-    - *"How do patient satisfaction scores vary by age, gender, and race?"*
+/*
+====================================
+😊 Patient Satisfaction & Outcomes
+====================================
+*/
 
-11. **Admission vs. Discharge Rates:**
-    - *"What percentage of ER visits result in hospital admission versus discharge?"*
+--10. What is the average satisfaction score reported by ER patients?
+SELECT
+	AVG(CAST(patient_sat_score AS FLOAT)) AS avg_satisfaction_score,
+	COUNT(patient_sat_score) AS patients_who_reviewed,
+	COUNT(*) AS total_patients
+FROM dbo.hospital_er_dataset
+; -- The average satisfaction score is 4.99 stars from the 2517 patients who left a rating
 
-12. **Average Length of Stay for Admitted Patients:**
-    - *"What is the average duration of hospital stay for patients admitted through the ER?"*
 
----
+--11. How do patient satisfaction scores vary by age, gender, and race?
+	/*
+	======
+	Age
+	======
+	*/
+WITH age_group_cte AS (
+	SELECT
+		CASE
+			WHEN patient_age <= 18 THEN '0—18'
+			WHEN patient_age >= 19 AND patient_age <= 34 THEN '19—34'
+			WHEN patient_age >= 35 AND patient_age <= 50 THEN '35—50'
+			WHEN patient_age >= 51 AND patient_age <= 65 THEN '51—65'
+			ELSE 'Above 66'
+		END AS age_group,
+		patient_sat_score
+	FROM hospital_er_dataset
+)
+SELECT
+	age_group,
+	AVG(CAST(patient_sat_score AS FLOAT)) AS avg_satisfaction_score,
+	COUNT(patient_sat_score) AS patients_who_reviewed
+FROM age_group_cte
+GROUP BY age_group
+ORDER BY avg_satisfaction_score DESC
+; -- Middle-aged patients tend to give higher satisfaction ratings than other groups even though the overall rating is just below average
 
-### 📊 Demographics & Patient Profiles
+	/*
+	======
+	Gender
+	======
+	*/
+SELECT
+	patient_gender,
+	ROUND(AVG(CAST(patient_sat_score AS FLOAT)), 2) AS avg_satisfaction_score
+FROM hospital_er_dataset
+GROUP BY patient_gender
+; -- Male patients seem to give higher ratings on average
 
-13. **Patient Demographics Overview:**
-    - *"What is the demographic breakdown (age, gender, race) of ER patients?"*
+	/*
+	======
+	Race
+	======
+	*/
+SELECT
+	patient_race,
+	ROUND(AVG(CAST(patient_sat_score AS FLOAT)), 2) AS avg_satisfaction_score,
+	COUNT(patient_sat_score) AS total_patients_who_reviewed,
+	ROUND(100 * (COUNT(patient_sat_score) / CAST(COUNT(*) AS FLOAT)), 2) AS percentage_who_reviewed
+FROM hospital_er_dataset
+GROUP BY patient_race
+ORDER BY avg_satisfaction_score DESC
+; --Pacific Islanders tend to give higher ratings but have 5 times less reviewers than the race with the highest review
 
-14. **Common Diagnoses by Demographic Group:**
-    - *"What are the most frequent diagnoses among different demographic groups?"*
 
-15. **Insurance Coverage Distribution:**
-    - *"What types of insurance coverage do ER patients have?"*
+-- 12. What percentage of ER visits result in hospital admission versus discharge?
+SELECT
+	ROUND(100 * (total_admissions / total_patients), 2)
+FROM(
+	SELECT
+		SUM(CASE
+				WHEN patient_admin_flag = 'TRUE' THEN 1
+				ELSE 0
+			END) AS total_admissions,
+		CAST(COUNT(*) AS FLOAT) AS total_patients
+	FROM dbo.hospital_er_dataset
+) admin_subquery
+; -- About half of all patients are admitted to the hospital
 
----
 
-### 🏢 Departmental & Referral Analysis
+/*
+==========================
+📊 Demographics & Patient Profiles
+==========================
+*/
 
-16. **Top Referring Departments:**
-    - *"Which hospital departments refer the most patients to the ER?"*
+-- 13. What is the demographic breakdown (age, gender, race) of ER patients?
+	/*
+	======
+	Age
+	======
+	*/
+WITH age_group_cte AS (
+	SELECT
+		CASE
+			WHEN patient_age <= 18 THEN '0—18'
+			WHEN patient_age >= 19 AND patient_age <= 34 THEN '19—34'
+			WHEN patient_age >= 35 AND patient_age <= 50 THEN '35—50'
+			WHEN patient_age >= 51 AND patient_age <= 65 THEN '51—65'
+			ELSE 'Above 66'
+		END AS age_group,
+		patient_id
+	FROM hospital_er_dataset
+)
+SELECT
+	age_group,
+	COUNT(patient_id) AS total_patients,
+	ROUND(100 * COUNT(patient_id) / SUM(CAST(COUNT(patient_id) AS FLOAT)) OVER (), 2) AS percentage_total_patients
+FROM age_group_cte
+GROUP BY age_group
+ORDER BY total_patients DESC
+; -- Patients under the age of 18 visit the ER the most (22.89%).
 
-17. **Referral Patterns Over Time:**
-    - *"How have referral patterns to the ER changed over the past year?"*
+	/*
+	======
+	Gender
+	======
+	*/
+SELECT
+	patient_gender,
+	COUNT(patient_id) AS total_patients,
+	ROUND(100 * COUNT(patient_id) / SUM(CAST(COUNT(patient_id) AS FLOAT)) OVER (), 2) AS percentage_total_patients
+FROM hospital_er_dataset
+GROUP BY patient_gender
+ORDER BY total_patients DESC
+; -- Male patients have the most (51.05%) visits to the ER
+
+	/*
+	======
+	Race
+	======
+	*/
+SELECT
+	patient_race,
+	COUNT(patient_id) AS total_patients,
+	ROUND(100 * COUNT(patient_id) / SUM(CAST(COUNT(patient_id) AS FLOAT)) OVER (), 2) AS percentage_total_patients
+FROM hospital_er_dataset
+GROUP BY patient_race
+ORDER BY total_patients DESC
+; -- White patients (27.90%) visit the ER the most followed by African American patients (21.17%)
+
+
+/*
+==========================
+🏢 Departmental & Referral Analysis
+==========================
+*/
+
+-- 14. Which hospital departments refer the most patients to the ER?
+SELECT
+	department_referral,
+	COUNT(patient_id) AS total_patients,
+	ROUND(100 * COUNT(patient_id) / SUM(CAST(COUNT(patient_id) AS FLOAT)) OVER (), 2) AS percentage_total_patients
+FROM dbo.hospital_er_dataset
+WHERE department_referral != 'None' -- To filter out patients who were NOT referred
+GROUP BY department_referral
+ORDER BY total_patients DESC
+; -- General Practice refers almost half (48.22%) of all patients to the ER
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+-- 15. How have referral patterns to the ER changed over the past year?
+SELECT
+	YEAR(date) AS year,
+	department_referral,
+	COUNT(patient_id) AS total_patients
+FROM dbo.hospital_er_dataset
+WHERE department_referral != 'None'
+GROUP BY YEAR(date), department_referral
+ORDER BY 1, 2
+;
+
 
 18. **Admission Rates by Referring Department:**
     - *"What are the admission rates for patients referred from each department?"*
-
----
-
-### 🛠️ Operational Metrics
-
-19. **ER Occupancy Rates:**
-    - *"What is the average occupancy rate of the ER during different times of the day?"*
-
-20. **Resource Utilization Rates:**
-    - *"How are ER resources (e.g., beds, staff) utilized during peak and off-peak hours?"*
-
-21. **Time to Triage Completion:**
-    - *"What is the average time taken to complete triage for incoming patients?"*
-
----
-
-These questions can be translated into SQL queries to analyze your ER data effectively. For instance, to determine the average wait time:
-
-```sql
-SELECT AVG(TIMESTAMPDIFF(MINUTE, arrival_time, first_seen_time)) AS average_wait_time
-FROM er_visits
-WHERE arrival_time BETWEEN '2025-01-01' AND '2025-01-31';
-```
-
-To identify peak hours:
-
-```sql
-SELECT HOUR(arrival_time) AS hour, COUNT(*) AS visit_count
-FROM er_visits
-GROUP BY HOUR(arrival_time)
-ORDER BY visit_count DESC;
-```
-
-By systematically addressing these questions, you can gain comprehensive insights into ER operations, patient experiences, and areas for improvement.
-
-If you need assistance crafting specific SQL queries based on your database schema, feel free to provide more details, and I'd be glad to help! 
