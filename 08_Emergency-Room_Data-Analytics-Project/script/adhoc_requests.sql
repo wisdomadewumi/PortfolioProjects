@@ -309,16 +309,26 @@ ORDER BY total_patients DESC
 
 
 
-/*
+
 -- 15. How have referral patterns to the ER changed over the past year?
+WITH referral AS (
+	SELECT
+		department_referral,
+		YEAR(date) AS year,
+		COUNT(patient_id) AS total_patients_cy,
+		LAG(COUNT(patient_id)) OVER (PARTITION BY department_referral ORDER BY YEAR(date)) AS total_patients_py
+	FROM dbo.hospital_er_dataset
+	WHERE department_referral != 'None'
+	GROUP BY department_referral, YEAR(date)
+)
 SELECT
-	YEAR(date) AS year,
 	department_referral,
-	COUNT(patient_id) AS total_patients
-FROM dbo.hospital_er_dataset
-WHERE department_referral != 'None'
-GROUP BY YEAR(date), department_referral
-ORDER BY 1, 2
+	year,
+	total_patients_cy,
+	total_patients_py,
+	ROUND(100 * ((total_patients_cy - total_patients_py) / CAST(total_patients_py AS FLOAT)), 2) AS percent_change
+FROM referral
+WHERE year != 2023
 ;
 
 
